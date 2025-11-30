@@ -7,13 +7,17 @@
     <style>
         body { font-family: sans-serif; margin: 20px; }
         .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc; }
-        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .image-item { border: 1px solid #eee; padding: 10px; text-align: center; position: relative; }
-        .image-item img { max-width: 100%; height: auto; display: block; margin: 0 auto 10px; }
-        .checkbox { position: absolute; top: 5px; right: 5px; transform: scale(1.5); }
+        
+        /* Table Styles */
+        .image-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .image-table th, .image-table td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; }
+        .image-table th { background-color: #f2f2f2; }
+        .image-table td:first-child { text-align: center; }
+        
+        .preview-img { max-height: 50px; width: auto; display: block; }
+
         .pagination { margin-top: 20px; text-align: center; }
-        .pagination a, .pagination span { margin: 0 5px; text-decoration: none; padding: 5px 10px; border: 1px solid #ddd; }
-        .pagination span.current { background-color: #007bff; color: white; border-color: #007bff; }
+        /* ... (other styles from previous version) ... */
         .template-area { width: 100%; margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
         textarea { width: 98%; padding: 5px; font-family: monospace; }
         button { padding: 10px 15px; background-color: #28a745; color: white; border: none; cursor: pointer; }
@@ -32,11 +36,7 @@
     <form method="POST" action="/">
         <div class="template-area">
             <h3>Shell Command Template</h3>
-            <p>Use these placeholders:</p>
-            <ul>
-                <li><code>{}</code>: The **full, quoted path** to the image file (e.g., <code>'/path/to/your/images/photo.jpg'</code>)</li>
-                <li><code>{n}</code>: The **filename without the extension** (e.g., <code>photo</code>)</li>
-            </ul>
+            <p>Use <code>{}</code> for the full, quoted path, and <code>{n}</code> for the name without extension.</p>
             <textarea name="command_template" rows="2" required>{{ template_command }}</textarea>
         </div>
 
@@ -58,69 +58,96 @@
             </div>
         </div>
 
-        <div class="image-grid">
-            {% for image in images %}
-                <div class="image-item">
-                    <input type="checkbox" name="selected_images" value="{{ image }}" class="checkbox image-checkbox" id="img-{{ loop.index }}">
-                    <label for="img-{{ loop.index }}">
-                        <img src="{{ url_for('static', filename='images/' + image) }}" alt="{{ image }}" title="{{ image }}" style="max-height: 100px; object-fit: contain;">
-                        <p>{{ image }}</p>
-                    </label>
-                </div>
-            {% else %}
-                <p>No images found in the configured directory or on this page.</p>
-            {% endfor %}
-        </div>
-
+        <table class="image-table">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Preview</th>
+                    <th>Filename</th>
+                    <th>Dimensions</th>
+                    <th>File Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for image in images %}
+                <tr>
+                    <td>
+                        <input type="checkbox" name="selected_filenames" value="{{ image.filename }}" class="checkbox image-checkbox" id="img-{{ loop.index }}">
+                    </td>
+                    <td>
+                        <img class="preview-img" src="{{ url_for('static', filename='images/' + image.filename) }}" alt="{{ image.filename }}">
+                    </td>
+                    <td><label for="img-{{ loop.index }}">{{ image.filename }}</label></td>
+                    <td>{{ image.dimensions }}</td>
+                    <td>{{ image.size }}</td>
+                </tr>
+                {% else %}
+                    <tr><td colspan="5">No images found in the configured directory or on this page.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% if total_pages > 1 %}
             <div class="pagination">
-                {% if page_num > 1 %}
-                    <a href="{{ url_for('index', page_num=page_num-1, page_size=page_size) }}">&laquo; Previous</a>
-                {% endif %}
-                
-                <span class="current">Page {{ page_num }} of {{ total_pages }}</span>
-                
-                {% if page_num < total_pages %}
-                    <a href="{{ url_for('index', page_num=page_num+1, page_size=page_size) }}">Next &raquo;</a>
-                {% endif %}
-            </div>
+                </div>
         {% endif %}
     </form>
     
     <script>
+        // JS function to handle page size change (from previous revision)
         function changePageSize(newSize) {
-            // Get the current URL's path and query parameters
             const url = new URL(window.location.href);
-
-            // Set the new page_size parameter
             url.searchParams.set('page_size', newSize);
-
-            // Optionally, reset the page number to 1 when changing size
             url.searchParams.set('page_num', '1'); 
-
-            // Redirect to the new URL (GET request)
             window.location.href = url.toString();
         }
-        
+
+        // JS for Check All Button (from previous revision)
         document.getElementById('checkAllBtn').addEventListener('click', function() {
             var checkboxes = document.querySelectorAll('.image-checkbox');
             var allChecked = true;
-            
-            // Check if all are currently checked
             checkboxes.forEach(function(checkbox) {
                 if (!checkbox.checked) {
                     allChecked = false;
                 }
             });
-
-            // Set all to the opposite state (uncheck all if all are checked, otherwise check all)
             checkboxes.forEach(function(checkbox) {
                 checkbox.checked = !allChecked;
             });
-            
-            // Update button text
             this.textContent = allChecked ? 'Check All on Page' : 'Uncheck All on Page';
         });
+
+        // --- NEW: SHIFT+CLICK RANGE SELECTION LOGIC ---
+        
+        let lastChecked = null;
+        const checkboxes = document.querySelectorAll('.image-checkbox');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('click', function(e) {
+                if (!lastChecked) {
+                    lastChecked = this;
+                    return;
+                }
+
+                if (e.shiftKey) {
+                    const currentIndex = Array.from(checkboxes).indexOf(this);
+                    const lastIndex = Array.from(checkboxes).indexOf(lastChecked);
+
+                    const start = Math.min(currentIndex, lastIndex);
+                    const end = Math.max(currentIndex, lastIndex);
+
+                    // Determine the state to apply (if the current click was to check or uncheck)
+                    const isChecking = this.checked; 
+
+                    for (let i = start; i <= end; i++) {
+                        checkboxes[i].checked = isChecking;
+                    }
+                }
+
+                lastChecked = this;
+            });
+        });
+        
+        // --- END SHIFT+CLICK LOGIC ---
     </script>
 
 </body>
