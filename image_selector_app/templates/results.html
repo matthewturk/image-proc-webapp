@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Script</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        pre { background-color: #f4f4f4; border: 1px solid #ddd; padding: 15px; overflow-x: auto; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>✅ Generated Shell Script</h1>
+    <p>Script generated for **{{ selected_count }}** image(s). Copy the content below, save it as a `.sh` file (e.g., `run_commands.sh`), and execute it in your terminal (<code>bash run_commands.sh</code>).</p>
+    
+    <pre id="script-content">{{ final_script }}</pre>
+
+    <button onclick="copyScript()">Copy Script to Clipboard</button>
+    <a href="{{ url_for('index') }}"><button style="background-color: #6c757d;">&larr; Start New Selection</button></a>
+
+    <script>
+        function copyScript() {
+            var scriptContent = document.getElementById('script-content').textContent;
+            navigator.clipboard.writeText(scriptContent).then(function() {
+                alert('Script copied to clipboard!');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+                alert('Could not copy script. Please copy manually.');
+            });
+        }
+    </script>
+</body>
+</html>
