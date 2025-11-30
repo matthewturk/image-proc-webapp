@@ -32,14 +32,18 @@
     <form method="POST" action="/">
         <div class="template-area">
             <h3>Shell Command Template</h3>
-            <p>Use <code>{}</code> as the placeholder for the **full, quoted path** to the selected image file.</p>
+            <p>Use these placeholders:</p>
+            <ul>
+                <li><code>{}</code>: The **full, quoted path** to the image file (e.g., <code>'/path/to/your/images/photo.jpg'</code>)</li>
+                <li><code>{n}</code>: The **filename without the extension** (e.g., <code>photo</code>)</li>
+            </ul>
             <textarea name="command_template" rows="2" required>{{ template_command }}</textarea>
         </div>
 
         <div class="controls">
             <div class="page-size-select">
                 <label for="page_size">Images Per Page:</label>
-                <select name="page_size" id="page_size" onchange="this.form.submit()">
+                <select name="page_size" id="page_size" onchange="changePageSize(this.value)">
                     {% for size in page_sizes %}
                         <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>
                             {% if size == 0 %}All{% else %}{{ size }}{% endif %}
@@ -84,6 +88,20 @@
     </form>
     
     <script>
+        function changePageSize(newSize) {
+            // Get the current URL's path and query parameters
+            const url = new URL(window.location.href);
+
+            // Set the new page_size parameter
+            url.searchParams.set('page_size', newSize);
+
+            // Optionally, reset the page number to 1 when changing size
+            url.searchParams.set('page_num', '1'); 
+
+            // Redirect to the new URL (GET request)
+            window.location.href = url.toString();
+        }
+        
         document.getElementById('checkAllBtn').addEventListener('click', function() {
             var checkboxes = document.querySelectorAll('.image-checkbox');
             var allChecked = true;

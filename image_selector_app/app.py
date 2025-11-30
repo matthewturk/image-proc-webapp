@@ -7,7 +7,7 @@ app.secret_key = 'a_very_secret_key_change_this_in_production'
 
 # --- Configuration ---
 # CHANGE THIS TO YOUR IMAGE DIRECTORY!
-IMAGE_DIR = '/path/to/your/images'
+IMAGE_DIR = 'image_selector_app/static/images/'
 # Supported images per page
 PAGE_SIZES = [10, 50, 100, 0] # 0 for "All"
 
@@ -65,12 +65,19 @@ def index(page_num=1):
             "IMAGE_DIR='" + IMAGE_DIR + "'"
         ]
         
-        # 2. Iterate and replace the placeholder
+        # 2. Iterate and replace the placeholders
         for image in selected_images:
-            # Full path to the image
+            # Full path to the image, quoted for safety
             full_path = os.path.join("$IMAGE_DIR", image)
-            # Replace '{}' in the template with the full path, ensuring safe quotes
-            command = command_template.replace('{}', f"'{full_path}'")
+            quoted_full_path = f"'{full_path}'"
+
+            # Filename without extension
+            name_only = os.path.splitext(image)[0]
+            
+            # Replace '{}' with the full path and '{n}' with the name without extension
+            command = command_template.replace('{}', quoted_full_path)
+            command = command.replace('{n}', name_only)
+            
             script_lines.append(command)
             
         final_script = "\n".join(script_lines)
@@ -117,8 +124,10 @@ def index(page_num=1):
                            page_size=page_size,
                            page_sizes=PAGE_SIZES,
                            total_image_count=len(all_images),
-                           template_command=request.form.get('command_template', 'convert {} -quality 80 {}_comp.jpg') # Default template
+                           # Default template updated to show new placeholder
+                           template_command=request.form.get('command_template', 'convert {} -resize 50% {n}_thumb.jpg') 
                            )
+
 
 @app.route('/results')
 def results():
