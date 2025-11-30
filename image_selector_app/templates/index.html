@@ -6,7 +6,16 @@
     <title>Image Selector</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
-        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc; }
+        .controls { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            padding: 10px; 
+            border-bottom: 1px solid #ccc;
+            flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+            gap: 15px; /* Spacing between control groups */
+        }
         
         /* Table Styles */
         .image-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -14,7 +23,13 @@
         .image-table th { background-color: #f2f2f2; }
         .image-table td:first-child { text-align: center; }
         
-        .preview-img { max-height: 50px; width: auto; display: block; }
+        /* Target the preview images directly or use a more specific class */
+        .preview-img { 
+            max-height: 50px; /* Default height */
+            width: auto; 
+            display: block; 
+            object-fit: contain; /* Ensures images are scaled within bounds */
+        }
 
         .pagination { margin-top: 20px; text-align: center; }
         /* ... (other styles from previous version) ... */
@@ -24,6 +39,16 @@
         button:hover { background-color: #218838; }
         #checkAllBtn { margin-left: 20px; padding: 5px 10px; }
         .page-size-select select { padding: 5px; }
+
+        /* New styles for the thumbnail size control */
+        .thumbnail-size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .thumbnail-size-control input[type="range"] {
+            width: 120px; /* Adjust as needed */
+        }
     </style>
 </head>
 <body>
@@ -52,6 +77,13 @@
                 </select>
             </div>
             
+            {# NEW: Thumbnail Size Control #}
+            <div class="thumbnail-size-control">
+                <label for="thumbnail_size">Thumbnail Size:</label>
+                <input type="range" id="thumbnail_size" min="20" max="200" value="50" oninput="adjustThumbnailSize(this.value)">
+                <span id="thumbnail_size_value">50px</span>
+            </div>
+
             <div>
                 <button type="button" id="checkAllBtn">Check All on Page</button>
                 <button type="submit">Generate Shell Script</button>
@@ -88,7 +120,16 @@
         </table>
         {% if total_pages > 1 %}
             <div class="pagination">
-                </div>
+                {% if page_num > 1 %}
+                    <a href="{{ url_for('index', page_num=page_num-1, page_size=page_size) }}">&laquo; Previous</a>
+                {% endif %}
+                
+                <span class="current">Page {{ page_num }} of {{ total_pages }}</span>
+                
+                {% if page_num < total_pages %}
+                    <a href="{{ url_for('index', page_num=page_num+1, page_size=page_size) }}">Next &raquo;</a>
+                {% endif %}
+            </div>
         {% endif %}
     </form>
     
@@ -116,8 +157,7 @@
             this.textContent = allChecked ? 'Check All on Page' : 'Uncheck All on Page';
         });
 
-        // --- NEW: SHIFT+CLICK RANGE SELECTION LOGIC ---
-        
+        // Shift+Click Range Selection Logic (from previous revision)
         let lastChecked = null;
         const checkboxes = document.querySelectorAll('.image-checkbox');
 
@@ -135,7 +175,6 @@
                     const start = Math.min(currentIndex, lastIndex);
                     const end = Math.max(currentIndex, lastIndex);
 
-                    // Determine the state to apply (if the current click was to check or uncheck)
                     const isChecking = this.checked; 
 
                     for (let i = start; i <= end; i++) {
@@ -147,7 +186,34 @@
             });
         });
         
-        // --- END SHIFT+CLICK LOGIC ---
+        // --- NEW: Thumbnail Size Adjustment Logic ---
+        const thumbnailSizeSlider = document.getElementById('thumbnail_size');
+        const thumbnailSizeValue = document.getElementById('thumbnail_size_value');
+        const previewImages = document.querySelectorAll('.preview-img'); // Get all image elements
+
+        // Function to apply the size
+        function adjustThumbnailSize(size) {
+            previewImages.forEach(img => {
+                img.style.maxHeight = size + 'px'; // Apply max-height to control size while maintaining aspect ratio
+            });
+            thumbnailSizeValue.textContent = size + 'px'; // Update displayed value
+            localStorage.setItem('thumbnailSize', size); // Store preference
+        }
+
+        // Initialize slider and images based on stored preference or default
+        const storedSize = localStorage.getItem('thumbnailSize');
+        if (storedSize) {
+            thumbnailSizeSlider.value = storedSize; // Set slider to stored value
+            adjustThumbnailSize(storedSize); // Apply stored size
+        } else {
+            // Apply default value if no preference is stored
+            adjustThumbnailSize(thumbnailSizeSlider.value);
+        }
+
+        // The oninput event listener is already added in the HTML:
+        // oninput="adjustThumbnailSize(this.value)"
+        
+        // --- END NEW LOGIC ---
     </script>
 
 </body>
